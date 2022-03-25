@@ -33,6 +33,7 @@
         <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
         <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
       </el-form-item>
+
     </el-form>
 
     <el-row :gutter="10" class="mb8">
@@ -83,7 +84,7 @@
 
     <el-table v-loading="loading" :data="eqmentList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
-      <el-table-column label="设备id" align="center" prop="id" v-if="id" />
+      <el-table-column label="设备id" align="center" prop="id" />
       <el-table-column label="设备名称" align="center" prop="eqmentName" />
       <el-table-column label="设备编号" align="center" prop="eqmentNumber" />
       <el-table-column label="状态" align="center" prop="eqmentStatus">
@@ -96,10 +97,11 @@
           <dict-tag :options="dict.type.eq_type" :value="scope.row.eqmentType"/>
         </template>
       </el-table-column>
-      <el-table-column label="教室" align="center" prop="classroomId" >
-        <template slot-scope="scope">
-          <dict-tag :options="dict.type.test_classroom" :value="scope.row.classroomId"/>
-        </template>
+      <el-table-column label="教室id" align="center" prop="classroomId" />
+      <el-table-column label="教室" align="center" prop="classroom.className" >
+<!--        <template slot-scope="scope">-->
+<!--          <dict-tag :options="dict.type.test_classroom" :value="scope.row.classroomId"/>-->
+<!--        </template>-->
       </el-table-column>
       <el-table-column label="出厂日期" align="center" prop="proDate" width="180">
         <template slot-scope="scope">
@@ -154,7 +156,7 @@
             <el-radio
               v-for="dict in dict.type.eq_status"
               :key="dict.value"
-:label="dict.value"
+              :label="dict.value"
             >{{dict.label}}</el-radio>
           </el-radio-group>
         </el-form-item>
@@ -167,6 +169,9 @@
 :value="dict.value"
             ></el-option>
           </el-select>
+        </el-form-item>
+        <el-form-item label="教室" prop="classroomId">
+          <treeselect v-model="form.classroomId" :options="classroomTestOptions" :normalizer="normalizer" placeholder="请选择教室" />
         </el-form-item>
         <el-form-item label="出厂日期" prop="proDate">
           <el-date-picker clearable
@@ -198,10 +203,16 @@
 
 <script>
 import { listEqment, getEqment, delEqment, addEqment, updateEqment } from "@/api/equipmentMan/eqment";
+import { listClassroomTest, getClassroomTest, delClassroomTest, addClassroomTest, updateClassroomTest } from "@/api/equipmentMan/classroomTest";
+import {  getClassroom} from "@/api/equipmentMan/classroom";
+import Treeselect from "@riophae/vue-treeselect";
+import "@riophae/vue-treeselect/dist/vue-treeselect.css";
+
 
 export default {
   name: "Eqment",
   dicts: ['eq_status', 'eq_type','test_classroom'],
+  components: { Treeselect },
 
   data() {
     return {
@@ -217,6 +228,8 @@ export default {
       showSearch: true,
       // 总条数
       total: 0,
+      className:undefined,
+      classroomTestOptions:undefined,
       // 设备信息表格数据
       eqmentList: [],
       // 弹出层标题
@@ -230,6 +243,8 @@ export default {
         eqmentName: null,
         eqmentStatus: null,
         eqmentType: null,
+        classroomId: null,
+        id:null
       },
       // 表单参数
       form: {},
@@ -249,6 +264,26 @@ export default {
         this.eqmentList = response.rows;
         this.total = response.total;
         this.loading = false;
+      });
+    },
+    /** 转换教室信息测试数据结构 */
+    normalizer(node) {
+      if (node.children && !node.children.length) {
+        delete node.children;
+      }
+      return {
+        id: node.id,
+        label: node.className,
+        children: node.children
+      };
+    },
+    /** 查询教室信息测试下拉树结构 */
+    getTreeselect() {
+      listClassroomTest().then(response => {
+        this.classroomTestOptions = [];
+        const data = { id: 0, className: '教室', children: [] };
+        data.children = this.handleTree(response.data, "id", "parentId");
+        this.classroomTestOptions.push(data);
       });
     },
     // 取消按钮
@@ -290,13 +325,17 @@ export default {
     /** 新增按钮操作 */
     handleAdd() {
       this.reset();
+      this.getTreeselect();
       this.open = true;
       this.title = "添加设备信息";
     },
     /** 修改按钮操作 */
     handleUpdate(row) {
+      console.log(row.id)
       this.reset();
+      this.getTreeselect();
       const id = row.id || this.ids
+
       getEqment(id).then(response => {
         this.form = response.data;
         this.open = true;
@@ -306,7 +345,6 @@ export default {
     /** 提交按钮 */
     submitForm() {
       this.$refs["form"].validate(valid => {
-        this.form.classroomId = '12';
         if (valid) {
           if (this.form.id != null) {
             updateEqment(this.form).then(response => {
