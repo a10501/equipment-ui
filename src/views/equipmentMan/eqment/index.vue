@@ -84,7 +84,7 @@
 
     <el-table v-loading="loading" :data="eqmentList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
-      <el-table-column label="设备id" align="center" prop="id" />
+<!--      <el-table-column label="设备id" align="center" prop="id" />-->
       <el-table-column label="设备名称" align="center" prop="eqmentName" />
       <el-table-column label="设备编号" align="center" prop="eqmentNumber" />
       <el-table-column label="状态" align="center" prop="eqmentStatus">
@@ -97,11 +97,8 @@
           <dict-tag :options="dict.type.eq_type" :value="scope.row.eqmentType"/>
         </template>
       </el-table-column>
-      <el-table-column label="教室id" align="center" prop="classroomId" />
+<!--      <el-table-column label="教室id" align="center" prop="classroomId" />-->
       <el-table-column label="教室" align="center" prop="classroom.className" >
-<!--        <template slot-scope="scope">-->
-<!--          <dict-tag :options="dict.type.test_classroom" :value="scope.row.classroomId"/>-->
-<!--        </template>-->
       </el-table-column>
       <el-table-column label="出厂日期" align="center" prop="proDate" width="180">
         <template slot-scope="scope">
@@ -166,12 +163,21 @@
               v-for="dict in dict.type.eq_type"
               :key="dict.value"
               :label="dict.label"
-:value="dict.value"
+              :value="dict.value"
             ></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="教室" prop="classroomId">
-          <treeselect v-model="form.classroomId" :options="classroomTestOptions" :normalizer="normalizer" placeholder="请选择教室" />
+        <el-form-item label="教室" prop="className">
+          <el-autocomplete
+            class="inline-input"
+            v-model="form.className"
+           :fetch-suggestions="querySearchAsync"
+            placeholder="请输入教室名称"
+            @select="handleSelect"
+            @keyup.enter.native="handleSubmit"
+            @input="changeStyle('block', '.el-autocomplete-suggestion')"
+            @keyup="changeStyle('block', '.el-autocomplete-suggestion')"
+          ></el-autocomplete>
         </el-form-item>
         <el-form-item label="出厂日期" prop="proDate">
           <el-date-picker clearable
@@ -203,17 +209,12 @@
 
 <script>
 import { listEqment, getEqment, delEqment, addEqment, updateEqment } from "@/api/equipmentMan/eqment";
-import { listClassroomTest, getClassroomTest, delClassroomTest, addClassroomTest, updateClassroomTest } from "@/api/equipmentMan/classroomTest";
-import {  getClassroom} from "@/api/equipmentMan/classroom";
-import Treeselect from "@riophae/vue-treeselect";
-import "@riophae/vue-treeselect/dist/vue-treeselect.css";
+import { listClassroom, getClassroom, delClassroom, addClassroom, updateClassroom } from "@/api/equipmentMan/classroom";
 
 
 export default {
   name: "Eqment",
-  dicts: ['eq_status', 'eq_type','test_classroom'],
-  components: { Treeselect },
-
+  dicts: ['eq_status', 'eq_type'],
   data() {
     return {
       // 遮罩层
@@ -228,8 +229,7 @@ export default {
       showSearch: true,
       // 总条数
       total: 0,
-      className:undefined,
-      classroomTestOptions:undefined,
+      restaurants:[],
       // 设备信息表格数据
       eqmentList: [],
       // 弹出层标题
@@ -250,11 +250,40 @@ export default {
       form: {},
       // 表单校验
       rules: {
+        eqmentName:[
+          {required: true, message: "设备名称不能为空", trigger: "blur" }
+        ],
+        eqmentNumber: [
+          {required:true,message:"设备编号不能为空",trigger:"blur"}
+        ],
+        className:[
+          {required:true,message:"请选择教室"},
+          {
+            validator: (rule, value, callback) => {
+              let p = {
+                pageNum: 1,
+                pageSize: 10,
+                className: value
+              };
+              console.log(value+"===============")
+              listClassroom(p).then(response => {
+                console.log(response.rows.length)
+                if(response.rows.length <= 0){
+                  console.log("=====---------------------------")
+                  callback(new Error('教室不存在，请联系管理员!'));
+                }
+              });
+              callback();
+            },
+            trigger: 'blur'
+          }
+        ]
       }
     };
   },
   created() {
     this.getList();
+    this.loadAll();
   },
   methods: {
     /** 查询设备信息列表 */
@@ -266,25 +295,47 @@ export default {
         this.loading = false;
       });
     },
-    /** 转换教室信息测试数据结构 */
-    normalizer(node) {
-      if (node.children && !node.children.length) {
-        delete node.children;
+    //获取教室信息
+    loadAll() {
+      listClassroom().then(response =>{
+        if(response.code === 200 && response.total > 0 ){
+          this.restaurants = response.rows
+          return this.restaurants;
+        }
+      })
+    },
+    //根据传进来的状态改变建议输入框的状态（展开|隐藏）
+    changeStyle(status, name) {
+      let dom = document.querySelectorAll(name);
+      dom[0].style.display = status;
+    },
+    handleSubmit() {
+      this.changeStyle("none", ".el-autocomplete-suggestion");
+    },
+    //input输入框建议数据处理
+    querySearchAsync(queryString, cb) {
+      var restaurants = this.restaurants;
+      // 解决element建议搜索框无法显示内容 的数据处理
+      for (var i = 0; i < restaurants.length; i++) {
+        restaurants[i].value = restaurants[i].className;
       }
-      return {
-        id: node.id,
-        label: node.className,
-        children: node.children
+      var results = queryString ? restaurants.filter(this.createStateFilter(queryString)) : restaurants;
+
+      // clearTimeout(this.timeout);
+      // this.timeout = setTimeout(() => {
+      //     cb(results);
+      // }, 1000 * Math.random());
+      cb(results);
+    },
+    createStateFilter(queryString) {
+      return (state) => {
+        return (state.value.toLowerCase().indexOf(queryString.toLowerCase()) === 0);
       };
     },
-    /** 查询教室信息测试下拉树结构 */
-    getTreeselect() {
-      listClassroomTest().then(response => {
-        this.classroomTestOptions = [];
-        const data = { id: 0, className: '教室', children: [] };
-        data.children = this.handleTree(response.data, "id", "parentId");
-        this.classroomTestOptions.push(data);
-      });
+    handleSelect(item) {
+      console.log("=================="+item.id)
+      this.form.className = item.className;
+      this.form.classroomId = item.id;
     },
     // 取消按钮
     cancel() {
@@ -300,6 +351,7 @@ export default {
         eqmentStatus: "0",
         eqmentType: null,
         classroomId: null,
+        className:null,
         proDate: null,
         buyDate: null,
         remark: null
@@ -325,19 +377,17 @@ export default {
     /** 新增按钮操作 */
     handleAdd() {
       this.reset();
-      this.getTreeselect();
       this.open = true;
       this.title = "添加设备信息";
     },
     /** 修改按钮操作 */
     handleUpdate(row) {
-      console.log(row.id)
       this.reset();
-      this.getTreeselect();
       const id = row.id || this.ids
-
       getEqment(id).then(response => {
         this.form = response.data;
+        this.form.className = response.data['classroom'].className;
+        console.log(response.data['classroom'].className);
         this.open = true;
         this.title = "修改设备信息";
       });

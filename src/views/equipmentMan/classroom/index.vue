@@ -9,6 +9,16 @@
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
+      <el-form-item label="教室状态" prop="status">
+        <el-select v-model="queryParams.status" placeholder="请选择教室状态" clearable>
+          <el-option
+            v-for="dict in dict.type.classroom_status"
+            :key="dict.value"
+            :label="dict.label"
+            :value="dict.value"
+          />
+        </el-select>
+      </el-form-item>
       <el-form-item>
         <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
         <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
@@ -63,8 +73,13 @@
 
     <el-table v-loading="loading" :data="classroomList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
-      <el-table-column label="教室id" align="center" prop="id" v-if="id" />
+      <el-table-column label="教室id" align="center" prop="id" />
       <el-table-column label="教室名称" align="center" prop="className" />
+      <el-table-column label="教室状态" align="center" prop="status">
+        <template slot-scope="scope">
+          <dict-tag :options="dict.type.classroom_status" :value="scope.row.status"/>
+        </template>
+      </el-table-column>
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
           <el-button
@@ -84,7 +99,7 @@
         </template>
       </el-table-column>
     </el-table>
-
+    
     <pagination
       v-show="total>0"
       :total="total"
@@ -98,6 +113,15 @@
       <el-form ref="form" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="教室名称" prop="className">
           <el-input v-model="form.className" placeholder="请输入教室名称" />
+        </el-form-item>
+        <el-form-item label="教室状态">
+          <el-radio-group v-model="form.status">
+            <el-radio
+              v-for="dict in dict.type.classroom_status"
+              :key="dict.value"
+:label="dict.value"
+            >{{dict.label}}</el-radio>
+          </el-radio-group>
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
@@ -113,6 +137,7 @@ import { listClassroom, getClassroom, delClassroom, addClassroom, updateClassroo
 
 export default {
   name: "Classroom",
+  dicts: ['classroom_status'],
   data() {
     return {
       // 遮罩层
@@ -138,6 +163,7 @@ export default {
         pageNum: 1,
         pageSize: 10,
         className: null,
+        status: null,
       },
       // 表单参数
       form: {},
@@ -169,6 +195,7 @@ export default {
       this.form = {
         id: null,
         className: null,
+        status: "0",
         createBy: null,
         createTime: null,
         updateBy: null,
