@@ -82,9 +82,14 @@
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getList"></right-toolbar>
     </el-row>
 
-    <el-table v-loading="loading" :data="eqmentList" @selection-change="handleSelectionChange">
-      <el-table-column type="selection" width="55" align="center" />
+    <el-table v-loading="loading" :data="eqmentList" @selection-change="handleSelectionChange" >
+      <el-table-column type="selection" width="55"  align="center" />
 <!--      <el-table-column label="设备id" align="center" prop="id" />-->
+      <el-table-column label="序号" width="50" align="center">
+      <template slot-scope="scope">
+        <span>{{scope.$index + 1}}</span>
+      </template>
+      </el-table-column>
       <el-table-column label="设备名称" align="center" prop="eqmentName" />
       <el-table-column label="设备编号" align="center" prop="eqmentNumber" />
       <el-table-column label="状态" align="center" prop="eqmentStatus">
@@ -98,7 +103,12 @@
         </template>
       </el-table-column>
 <!--      <el-table-column label="教室id" align="center" prop="classroomId" />-->
-      <el-table-column label="教室" align="center" prop="classroom.className" >
+      <el-table-column label="教室" align="center" prop="className" >
+      </el-table-column>
+      <el-table-column label="负责人" align="center" prop="responsiblePeo">
+<!--        <template slot-scope="scope">-->
+<!--          <dict-tag :options="dict.type.eq_type" :value="scope.row.responsiblePeo"/>-->
+<!--        </template>-->
       </el-table-column>
       <el-table-column label="出厂日期" align="center" prop="proDate" width="180">
         <template slot-scope="scope">
@@ -167,8 +177,11 @@
             ></el-option>
           </el-select>
         </el-form-item>
+        <el-form-item label="负责人" align="center" prop="responsiblePeo">
+          <el-input v-model="form.responsiblePeo" placeholder="请输入负责人" />
+        </el-form-item>
         <el-form-item label="教室" prop="className">
-          <el-autocomplete
+          <el-autocomplete ref='autocomplete'
             class="inline-input"
             v-model="form.className"
            :fetch-suggestions="querySearchAsync"
@@ -178,6 +191,7 @@
             @input="changeStyle('block', '.el-autocomplete-suggestion')"
             @keyup="changeStyle('block', '.el-autocomplete-suggestion')"
           ></el-autocomplete>
+          <span v-model="form.className"></span>
         </el-form-item>
         <el-form-item label="出厂日期" prop="proDate">
           <el-date-picker clearable
@@ -210,6 +224,7 @@
 <script>
 import { listEqment, getEqment, delEqment, addEqment, updateEqment } from "@/api/equipmentMan/eqment";
 import { listClassroom, getClassroom, delClassroom, addClassroom, updateClassroom } from "@/api/equipmentMan/classroom";
+import { getUserProfile } from "@/api/system/user";
 
 
 export default {
@@ -217,6 +232,7 @@ export default {
   dicts: ['eq_status', 'eq_type'],
   data() {
     return {
+      user:{},
       // 遮罩层
       loading: true,
       // 选中数组
@@ -253,6 +269,9 @@ export default {
         eqmentName:[
           {required: true, message: "设备名称不能为空", trigger: "blur" }
         ],
+        responsiblePeo:[
+          {required:true,message:"负责人不能为空",trigger:"blur"}
+        ],
         eqmentNumber: [
           {required:true,message:"设备编号不能为空",trigger:"blur"}
         ],
@@ -265,15 +284,14 @@ export default {
                 pageSize: 10,
                 className: value
               };
-              console.log(value+"===============")
               listClassroom(p).then(response => {
-                console.log(response.rows.length)
-                if(response.rows.length <= 0){
-                  console.log("=====---------------------------")
-                  callback(new Error('教室不存在，请联系管理员!'));
+                if(response.rows.length === 0){
+                  callback(new Error('教室不存在，请查询教室信息表!'));
+                }else{
+                  callback();
                 }
               });
-              callback();
+
             },
             trigger: 'blur'
           }
@@ -283,6 +301,7 @@ export default {
   },
   created() {
     this.getList();
+    this.getUser();
     this.loadAll();
   },
   methods: {
@@ -295,6 +314,7 @@ export default {
         this.loading = false;
       });
     },
+
     //获取教室信息
     loadAll() {
       listClassroom().then(response =>{
@@ -303,6 +323,13 @@ export default {
           return this.restaurants;
         }
       })
+    },
+    getUser() {
+      getUserProfile().then(response => {
+        this.user = response.data;
+        this.roleGroup = response.roleGroup;
+        this.postGroup = response.postGroup;
+      });
     },
     //根据传进来的状态改变建议输入框的状态（展开|隐藏）
     changeStyle(status, name) {
@@ -321,10 +348,6 @@ export default {
       }
       var results = queryString ? restaurants.filter(this.createStateFilter(queryString)) : restaurants;
 
-      // clearTimeout(this.timeout);
-      // this.timeout = setTimeout(() => {
-      //     cb(results);
-      // }, 1000 * Math.random());
       cb(results);
     },
     createStateFilter(queryString) {
@@ -333,7 +356,7 @@ export default {
       };
     },
     handleSelect(item) {
-      console.log("=================="+item.id)
+
       this.form.className = item.className;
       this.form.classroomId = item.id;
     },
@@ -351,7 +374,6 @@ export default {
         eqmentStatus: "0",
         eqmentType: null,
         classroomId: null,
-        className:null,
         proDate: null,
         buyDate: null,
         remark: null
@@ -377,6 +399,7 @@ export default {
     /** 新增按钮操作 */
     handleAdd() {
       this.reset();
+      this.form.responsiblePeo = this.user.userName;
       this.open = true;
       this.title = "添加设备信息";
     },
@@ -386,8 +409,6 @@ export default {
       const id = row.id || this.ids
       getEqment(id).then(response => {
         this.form = response.data;
-        this.form.className = response.data['classroom'].className;
-        console.log(response.data['classroom'].className);
         this.open = true;
         this.title = "修改设备信息";
       });

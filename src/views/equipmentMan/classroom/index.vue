@@ -73,7 +73,12 @@
 
     <el-table v-loading="loading" :data="classroomList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
-      <el-table-column label="教室id" align="center" prop="id" />
+<!--      <el-table-column label="教室id" align="center" prop="id" />-->
+      <el-table-column label="序号" width="50" align="center">
+        <template slot-scope="scope">
+          <span>{{scope.$index + 1}}</span>
+        </template>
+      </el-table-column>
       <el-table-column label="教室名称" align="center" prop="className" />
       <el-table-column label="教室状态" align="center" prop="status">
         <template slot-scope="scope">
@@ -99,7 +104,7 @@
         </template>
       </el-table-column>
     </el-table>
-    
+
     <pagination
       v-show="total>0"
       :total="total"

@@ -89,7 +89,12 @@
 
     <el-table v-loading="loading" :data="badinfoList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
-      <el-table-column label="设备报修id" align="center" prop="id" v-if="id" />
+<!--      <el-table-column label="设备报修id" align="center" prop="id" v-if="id" />-->
+      <el-table-column label="序号" width="50" align="center">
+        <template slot-scope="scope">
+          <span>{{scope.$index + 1}}</span>
+        </template>
+      </el-table-column>
       <el-table-column label="设备名称" align="center" prop="badinfoName" />
       <el-table-column label="故障说明" align="center" prop="badinfoStat" />
       <el-table-column label="申请人" align="center" prop="badinfoPeo" />
