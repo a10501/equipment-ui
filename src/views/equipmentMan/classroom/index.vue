@@ -76,7 +76,7 @@
 <!--      <el-table-column label="教室id" align="center" prop="id" />-->
       <el-table-column label="序号" width="50" align="center">
         <template slot-scope="scope">
-          <span>{{scope.$index + 1}}</span>
+          <span>{{(queryParams.pageNum-1)*queryParams.pageSize+scope.$index + 1}}</span>
         </template>
       </el-table-column>
       <el-table-column label="教室名称" align="center" prop="className" />

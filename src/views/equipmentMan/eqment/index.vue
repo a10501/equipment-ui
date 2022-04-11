@@ -83,12 +83,12 @@
     </el-row>
 
     <el-table v-loading="loading" :data="eqmentList" @selection-change="handleSelectionChange" >
-      <el-table-column type="selection" width="55"  align="center" />
+      <el-table-column type="selection" width="50"  align="center" />
 <!--      <el-table-column label="设备id" align="center" prop="id" />-->
       <el-table-column label="序号" width="50" align="center">
-      <template slot-scope="scope">
-        <span>{{scope.$index + 1}}</span>
-      </template>
+        <template slot-scope="scope">
+          <span>{{(queryParams.pageNum-1)*queryParams.pageSize+scope.$index + 1}}</span>
+        </template>
       </el-table-column>
       <el-table-column label="设备名称" align="center" prop="eqmentName" />
       <el-table-column label="设备编号" align="center" prop="eqmentNumber" />
@@ -105,10 +105,12 @@
 <!--      <el-table-column label="教室id" align="center" prop="classroomId" />-->
       <el-table-column label="教室" align="center" prop="className" >
       </el-table-column>
-      <el-table-column label="负责人" align="center" prop="responsiblePeo">
+      <el-table-column label="负责人" align="center" prop="userName">
 <!--        <template slot-scope="scope">-->
 <!--          <dict-tag :options="dict.type.eq_type" :value="scope.row.responsiblePeo"/>-->
 <!--        </template>-->
+      </el-table-column>
+      <el-table-column label="负责人电话" align="center" prop="sysUser.phonenumber">
       </el-table-column>
       <el-table-column label="出厂日期" align="center" prop="proDate" width="180">
         <template slot-scope="scope">
@@ -137,6 +139,14 @@
             @click="handleDelete(scope.row)"
             v-hasPermi="['equipmentMan:eqment:remove']"
           >删除</el-button>
+          <el-button
+            size="mini"
+            type="warning"
+            plain
+            icon="el-icon-s-cooperation"
+            @click="handleApplyBad(scope.row)"
+            v-hasPermi="['equipmentMan:badinfo:add']"
+          >报修</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -177,9 +187,17 @@
             ></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="负责人" align="center" prop="responsiblePeo">
-          <el-input v-model="form.responsiblePeo" placeholder="请输入负责人" />
+        <el-form-item label="负责人"  prop="userName">
+          <el-autocomplete ref='autocomplete'
+                           class="inline-input"
+                           v-model="form.userName"
+                           :fetch-suggestions="querySearchAsyncUser"
+                           placeholder="请输入负责人姓名"
+                           @select="handleSelectUser"
+                           @keyup.enter.native="handleSubmitUser"
+          ></el-autocomplete>
         </el-form-item>
+
         <el-form-item label="教室" prop="className">
           <el-autocomplete ref='autocomplete'
             class="inline-input"
@@ -191,7 +209,6 @@
             @input="changeStyle('block', '.el-autocomplete-suggestion')"
             @keyup="changeStyle('block', '.el-autocomplete-suggestion')"
           ></el-autocomplete>
-          <span v-model="form.className"></span>
         </el-form-item>
         <el-form-item label="出厂日期" prop="proDate">
           <el-date-picker clearable
@@ -218,13 +235,68 @@
         <el-button @click="cancel">取 消</el-button>
       </div>
     </el-dialog>
+
+    <!-- 添加或修改设备报修信息对话框 -->
+    <el-dialog :title="applyTitle" :visible.sync="openApply" width="500px" append-to-body>
+      <el-form ref="applyForm" :model="applyForm" :rules="applyRules" label-width="80px">
+        <el-form-item label="设备名称" prop="badinfoName">
+          <el-input v-model="applyForm.badinfoName" placeholder="请输入设备名称" />
+        </el-form-item>
+        <el-form-item label="教室" prop="className">
+          <el-autocomplete ref='autocomplete'
+                           class="inline-input"
+                           v-model="applyForm.className"
+                           :fetch-suggestions="querySearchAsync"
+                           placeholder="请输入教室名称"
+                           @select="handleSelect"
+                           @keyup.enter.native="handleSubmit"
+                           @input="changeStyle('block', '.el-autocomplete-suggestion')"
+                           @keyup="changeStyle('block', '.el-autocomplete-suggestion')"
+          ></el-autocomplete>
+        </el-form-item>
+        <el-form-item label="故障说明" prop="badinfoStat">
+          <el-input v-model="applyForm.badinfoStat" placeholder="请输入故障说明" />
+        </el-form-item>
+        <el-form-item label="申请人" prop="badinfoPeo">
+          <el-input v-model="applyForm.badinfoPeo" placeholder="请输入申请人" />
+        </el-form-item>
+<!--        <el-form-item  label="审核状态" prop="badinfoStatus">-->
+<!--          <el-select v-model="applyForm.badinfoStatus" placeholder="请选择审核状态">-->
+<!--            <el-option-->
+<!--              v-for="dict in dict.type.eq_handle_status"-->
+<!--              :key="dict.value"-->
+<!--              :label="dict.label"-->
+<!--              :value="dict.value"-->
+<!--            ></el-option>-->
+<!--          </el-select>-->
+<!--        </el-form-item>-->
+        <!--        <el-form-item label="申报日期" prop="badinfoDate">-->
+        <!--          <el-date-picker clearable-->
+        <!--            v-model="form.badinfoDate"-->
+        <!--            type="date"-->
+        <!--            value-format="yyyy-MM-dd"-->
+        <!--            placeholder="请选择申报日期">-->
+        <!--          </el-date-picker>-->
+        <!--        </el-form-item>-->
+        <el-form-item label="备注" prop="remark">
+          <el-input v-model="applyForm.remark" type="textarea" placeholder="请输入内容" />
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="submitApplyForm">确 定</el-button>
+        <el-button @click="cancelApply">取 消</el-button>
+      </div>
+    </el-dialog>
+
   </div>
 </template>
 
 <script>
 import { listEqment, getEqment, delEqment, addEqment, updateEqment } from "@/api/equipmentMan/eqment";
 import { listClassroom, getClassroom, delClassroom, addClassroom, updateClassroom } from "@/api/equipmentMan/classroom";
+import { listUser } from "@/api/system/user";
 import { getUserProfile } from "@/api/system/user";
+import {addBadinfo} from "@/api/equipmentMan/badinfo";
 
 
 export default {
@@ -245,7 +317,12 @@ export default {
       showSearch: true,
       // 总条数
       total: 0,
+      // 报修弹出层标题
+      applyTitle: "",
+      // 是否显示弹出层
+      openApply: false,
       restaurants:[],
+      restaurantsUser:[],
       // 设备信息表格数据
       eqmentList: [],
       // 弹出层标题
@@ -262,8 +339,10 @@ export default {
         classroomId: null,
         id:null
       },
-      // 表单参数
+      // 设备表单参数
       form: {},
+      //报修申请表单
+      applyForm: {},
       // 表单校验
       rules: {
         eqmentName:[
@@ -295,6 +374,32 @@ export default {
             },
             trigger: 'blur'
           }
+        ],
+        userName:[
+          {required:true,message:"负责人不能为空"},
+          {
+            validator: (rule, value, callback) => {
+              let p = {
+                pageNum: 1,
+                pageSize: 10,
+                userName: value
+              };
+              listUser(p).then(response => {
+                if(response.rows.length === 0){
+                  callback(new Error('负责人不存在，请联系管理员!'));
+                }else{
+                  callback();
+                }
+              });
+
+            },
+            trigger: 'blur'
+          }
+        ],
+      },
+      applyRules: {
+        badinfoName:[
+          {required:true,message:"设备名称不能为空"}
         ]
       }
     };
@@ -303,6 +408,7 @@ export default {
     this.getList();
     this.getUser();
     this.loadAll();
+    this.loadAllUser();
   },
   methods: {
     /** 查询设备信息列表 */
@@ -331,12 +437,51 @@ export default {
         this.postGroup = response.postGroup;
       });
     },
+    //获取用户信息
+    loadAllUser() {
+      listUser().then(response =>{
+        if(response.code === 200 && response.total > 0 ){
+          this.restaurantsUser = response.rows
+          return this.restaurantsUser;
+        }
+      })
+    },
+  //input输入框建议数据处理
+  querySearchAsyncUser(queryString, cb) {
+    var restaurantsUser = this.restaurantsUser;
+    // 解决element建议搜索框无法显示内容 的数据处理
+    for (var i = 0; i < restaurantsUser.length; i++) {
+      restaurantsUser[i].value = restaurantsUser[i].userName;
+    }
+    var results = queryString ? restaurantsUser.filter(this.createStateFilterUser(queryString)) : restaurantsUser;
+
+    cb(results);
+  },
+  createStateFilterUser(queryString) {
+    return (state) => {
+      return (state.value.toLowerCase().indexOf(queryString.toLowerCase()) === 0);
+    };
+  },
+  handleSelectUser(item) {
+     this.form.userName = item.userName;
+    this.form.peopleId = item.userId;
+  },
+
+
     //根据传进来的状态改变建议输入框的状态（展开|隐藏）
     changeStyle(status, name) {
       let dom = document.querySelectorAll(name);
       dom[0].style.display = status;
     },
     handleSubmit() {
+      this.changeStyle("none", ".el-autocomplete-suggestion");
+    },
+    //根据传进来的状态改变建议输入框的状态（展开|隐藏）
+    changeStyleUser(status, name) {
+      let dom = document.querySelectorAll(name);
+      dom[0].style.display = status;
+    },
+    handleSubmitUser() {
       this.changeStyle("none", ".el-autocomplete-suggestion");
     },
     //input输入框建议数据处理
@@ -360,10 +505,19 @@ export default {
       this.form.className = item.className;
       this.form.classroomId = item.id;
     },
+    handleSelectApply(item) {
+      this.applyForm.className = item.className;
+      this.applyForm.classroomId = item.id;
+    },
     // 取消按钮
     cancel() {
       this.open = false;
       this.reset();
+    },
+    // 取消申请按钮
+    cancelApply() {
+      this.openApply = false;
+      this.resetApply();
     },
     // 表单重置
     reset() {
@@ -379,6 +533,21 @@ export default {
         remark: null
       };
       this.resetForm("form");
+    },
+
+    // 报修申请表单重置
+    resetApply() {
+      this.applyForm = {
+        id: null,
+        badinfoName: null,
+        badinfoStat: null,
+        badinfoPeo: null,
+        badinfoStatus: '0',
+        classroomId: null,
+        badinfoDate: null,
+        remark: null
+      };
+      this.resetForm("applyForm");
     },
     /** 搜索按钮操作 */
     handleQuery() {
@@ -402,6 +571,18 @@ export default {
       this.form.responsiblePeo = this.user.userName;
       this.open = true;
       this.title = "添加设备信息";
+    },
+    /** 报修申请按钮操作 */
+    handleApplyBad(row) {
+      this.resetApply();
+      const id = row.id || this.ids
+      getEqment(id).then(response => {
+        this.applyForm.badinfoName = response.data.eqmentName;
+        this.applyForm.classroomId = response.data.classroomId;
+        this.applyForm.className = response.data.className;
+        this.openApply = true;
+      });
+      this.applyTile = "报修申请信息";
     },
     /** 修改按钮操作 */
     handleUpdate(row) {
@@ -430,6 +611,19 @@ export default {
               this.getList();
             });
           }
+        }
+      });
+    },
+    /** 报修提交按钮 */
+    submitApplyForm() {
+      this.$refs["applyForm"].validate(valid => {
+        if (valid) {
+            addBadinfo(this.applyForm).then(response => {
+              this.$modal.msgSuccess("报修成功");
+              this.openApply = false;
+
+            });
+
         }
       });
     },

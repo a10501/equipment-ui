@@ -92,7 +92,7 @@
 <!--      <el-table-column label="设备报修id" align="center" prop="id" v-if="id" />-->
       <el-table-column label="序号" width="50" align="center">
         <template slot-scope="scope">
-          <span>{{scope.$index + 1}}</span>
+          <span>{{(queryParams.pageNum-1)*queryParams.pageSize+scope.$index + 1}}</span>
         </template>
       </el-table-column>
       <el-table-column label="设备名称" align="center" prop="badinfoName" />
@@ -103,10 +103,12 @@
           <dict-tag :options="dict.type.eq_handle_status" :value="scope.row.badinfoStatus"/>
         </template>
       </el-table-column>
-      <el-table-column label="教室" align="center" prop="classroomId" >
-      <template slot-scope="scope">
-        <dict-tag :options="dict.type.test_classroom" :value="scope.row.classroomId"/>
-      </template>
+<!--      <el-table-column label="教室" align="center" prop="classroomId" >-->
+<!--      <template slot-scope="scope">-->
+<!--        <dict-tag :options="dict.type.test_classroom" :value="scope.row.classroomId"/>-->
+<!--      </template>-->
+<!--      </el-table-column>-->
+      <el-table-column label="教室" align="center" prop="className" >
       </el-table-column>
       <el-table-column label="申报日期" align="center" prop="badinfoDate" width="180">
         <template slot-scope="scope">
@@ -151,10 +153,20 @@
         <el-form-item label="故障说明" prop="badinfoStat">
           <el-input v-model="form.badinfoStat" placeholder="请输入故障说明" />
         </el-form-item>
+        <el-form-item label="教室" prop="className">
+          <el-autocomplete ref='autocomplete'
+                           class="inline-input"
+                           v-model="form.className"
+                           :fetch-suggestions="querySearchAsync"
+                           placeholder="请输入教室名称"
+                           @select="handleSelect"
+
+          ></el-autocomplete>
+        </el-form-item>
         <el-form-item label="申请人" prop="badinfoPeo">
           <el-input v-model="form.badinfoPeo" placeholder="请输入申请人" />
         </el-form-item>
-        <el-form-item label="审核状态" prop="badinfoStatus">
+        <el-form-item  label="审核状态" prop="badinfoStatus" v-hasPermi="['equipmentMan:badinfo:edit']">
           <el-select v-model="form.badinfoStatus" placeholder="请选择审核状态">
             <el-option
               v-for="dict in dict.type.eq_handle_status"
@@ -164,14 +176,14 @@
             ></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="申报日期" prop="badinfoDate">
-          <el-date-picker clearable
-            v-model="form.badinfoDate"
-            type="date"
-            value-format="yyyy-MM-dd"
-            placeholder="请选择申报日期">
-          </el-date-picker>
-        </el-form-item>
+<!--        <el-form-item label="申报日期" prop="badinfoDate">-->
+<!--          <el-date-picker clearable-->
+<!--            v-model="form.badinfoDate"-->
+<!--            type="date"-->
+<!--            value-format="yyyy-MM-dd"-->
+<!--            placeholder="请选择申报日期">-->
+<!--          </el-date-picker>-->
+<!--        </el-form-item>-->
         <el-form-item label="备注" prop="remark">
           <el-input v-model="form.remark" type="textarea" placeholder="请输入内容" />
         </el-form-item>
@@ -186,6 +198,7 @@
 
 <script>
 import { listBadinfo, getBadinfo, delBadinfo, addBadinfo, updateBadinfo } from "@/api/equipmentMan/badinfo";
+import {listClassroom} from "@/api/equipmentMan/classroom";
 
 export default {
   name: "Badinfo",
@@ -206,10 +219,12 @@ export default {
       total: 0,
       // 设备报修信息表格数据
       badinfoList: [],
+      restaurants: [],
       // 弹出层标题
       title: "",
       // 是否显示弹出层
       open: false,
+
       // 查询参数
       queryParams: {
         pageNum: 1,
@@ -240,6 +255,7 @@ export default {
   },
   created() {
     this.getList();
+    this.loadAll();
   },
   methods: {
     /** 查询设备报修信息列表 */
@@ -263,12 +279,21 @@ export default {
         badinfoName: null,
         badinfoStat: null,
         badinfoPeo: null,
-        badinfoStatus: null,
+        badinfoStatus: '0',
         classroomId: null,
         badinfoDate: null,
         remark: null
       };
       this.resetForm("form");
+    },
+    //获取教室信息
+    loadAll() {
+      listClassroom().then(response =>{
+        if(response.code === 200 && response.total > 0 ){
+          this.restaurants = response.rows
+          return this.restaurants;
+        }
+      })
     },
     /** 搜索按钮操作 */
     handleQuery() {
@@ -286,6 +311,27 @@ export default {
       this.single = selection.length!==1
       this.multiple = !selection.length
     },
+  //input输入框建议数据处理
+  querySearchAsync(queryString, cb) {
+    var restaurants = this.restaurants;
+    // 解决element建议搜索框无法显示内容 的数据处理
+    for (var i = 0; i < restaurants.length; i++) {
+      restaurants[i].value = restaurants[i].className;
+    }
+    var results = queryString ? restaurants.filter(this.createStateFilter(queryString)) : restaurants;
+
+    cb(results);
+  },
+  createStateFilter(queryString) {
+    return (state) => {
+      return (state.value.toLowerCase().indexOf(queryString.toLowerCase()) === 0);
+    };
+  },
+  handleSelect(item) {
+
+    this.form.className = item.className;
+    this.form.classroomId = item.id;
+  },
     /** 新增按钮操作 */
     handleAdd() {
       this.reset();
