@@ -17,6 +17,14 @@
             @keyup.enter.native="handleQuery"
           />
         </el-form-item>
+      <el-form-item label="楼栋名称" prop="dataName" v-if="columnShow.dataLocName">
+        <el-input
+          v-model="queryParams.dataLocName"
+          placeholder="请输入教室名称"
+          clearable
+          @keyup.enter.native="handleQuery"
+        />
+      </el-form-item>
         <el-form-item>
         <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
         <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
@@ -71,6 +79,7 @@
       </el-table-column>
       <el-table-column label="教室名称" align="center" prop="dataName" width="220" v-if="columnShow.dataName"/>
       <el-table-column label="用户" align="center" prop="dataUseName" width="220" v-if="columnShow.dataUseName" />
+      <el-table-column label="楼栋名称" align="center" prop="dataLocName" width="220" v-if="columnShow.dataLocName"/>
       <el-table-column label="时长" align="center" prop="dataUseTime" width="220"/> >
 
     </el-table>
@@ -99,6 +108,7 @@ export default {
       columnShow: {
         dataName: false,
         dataUseName: true,
+        dataLocName: false
       },
       // 遮罩层
       loading: true,
@@ -120,6 +130,7 @@ export default {
         pageSize: 10,
         dataUseName: null,
         dataName:null,
+        dataLocName: null,
         flag:1
       }
     };
@@ -143,6 +154,7 @@ export default {
       this.queryParams.flag = 1;
       this.columnShow.dataUseName = true;
       this.columnShow.dataName = false;
+      this.columnShow.dataLocName = false;
       this.resetForm("queryForm");
       this.getList();
     },
@@ -152,6 +164,7 @@ export default {
       this.queryParams.flag = 2;
       this.columnShow.dataName = true;
       this.columnShow.dataUseName = false;
+      this.columnShow.dataLocName = false;
       this.resetForm("queryForm");
       this.getList();
     },
@@ -159,7 +172,8 @@ export default {
       this.queryParams.pageNum = 1;
       this.queryParams.pageSize = 10;
       this.queryParams.flag = 3;
-      this.columnShow.dataName = true;
+      this.columnShow.dataName = false;
+      this.columnShow.dataLocName = true;
       this.columnShow.dataUseName = false;
       this.resetForm("queryForm");
       this.getList();

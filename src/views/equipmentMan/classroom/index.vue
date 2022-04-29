@@ -36,17 +36,17 @@
           v-hasPermi="['equipmentMan:classroom:add']"
         >新增</el-button>
       </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="success"
-          plain
-          icon="el-icon-edit"
-          size="mini"
-          :disabled="single"
-          @click="handleUpdate"
-          v-hasPermi="['equipmentMan:classroom:edit']"
-        >修改</el-button>
-      </el-col>
+<!--      <el-col :span="1.5">-->
+<!--        <el-button-->
+<!--          type="success"-->
+<!--          plain-->
+<!--          icon="el-icon-edit"-->
+<!--          size="mini"-->
+<!--          :disabled="single"-->
+<!--          @click="handleUpdate"-->
+<!--          v-hasPermi="['equipmentMan:classroom:edit']"-->
+<!--        >修改</el-button>-->
+<!--      </el-col>-->
       <el-col :span="1.5">
         <el-button
           type="danger"
@@ -88,6 +88,7 @@
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
           <el-button
+            v-if="scope.row.status !== '2'"
             size="mini"
             type="text"
             icon="el-icon-edit"
@@ -117,9 +118,10 @@
     <el-dialog :title="title" :visible.sync="open" width="500px" append-to-body>
       <el-form ref="form" :model="form" :rules="rules" label-width="80px">
         <el-form-item label="教室名称" prop="className">
-          <el-input v-model="form.className" placeholder="请输入教室名称" />
+          <el-input v-model="form.className" placeholder="请输入教室名称" v-if="this.title !== '添加教室信息'" readonly />
+          <el-input v-model="form.className" placeholder="请输入教室名称" v-else  />
         </el-form-item>
-        <el-form-item label="教室状态">
+        <el-form-item label="教室状态" v-if="this.title !== '添加教室信息'">
           <el-radio-group v-model="form.status">
             <el-radio
               v-for="dict in dict.type.classroom_status"

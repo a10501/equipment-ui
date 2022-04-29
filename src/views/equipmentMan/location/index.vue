@@ -96,10 +96,26 @@
         </template>
       </el-table-column>
       <el-table-column label="所在楼栋" align="center" prop="location" />
-      <el-table-column label="教室分布" align="center" prop="locationClass" />
+<!--      <el-table-column label="教室分布" align="center" prop="locationClass" />-->
+      <el-table-column label="教室分布" align="center" prop="locationClass">
+        <template slot-scope="scope">
+          <a @click="showStatement(scope.row)"  style="text-decoration: underline;color:blue;">
+            详细分布
+          </a>
+        </template>
+      </el-table-column>
+
       <el-table-column label="数量" align="center" prop="eqNumber" />
       <el-table-column label="责任人" align="center" prop="personCharg" />
       <el-table-column label="值班电话" align="center" prop="personPhone" />
+      <el-table-column label="使用教程" align="center" prop="useDownload" width="400">
+        <template slot-scope="scope">
+          <span @click="handledownload(scope.row)"
+                class="link-type"
+                style="text-decoration: underline;color:blue;"
+               v-hasPermi="['ywgl:document:downloadFile']">{{scope.row.useDownload}}</span>
+        </template>
+      </el-table-column>
 <!--      <el-table-column label="下载地址" align="center" prop="useDownload" />-->
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
@@ -117,13 +133,13 @@
             @click="handleDelete(scope.row)"
             v-hasPermi="['equipmentMan:location:remove']"
           >删除</el-button>
-          <el-button
-            size="mini"
-            type="text"
-            icon="el-icon-download"
-            @click="handledownload(scope.row)"
-            v-hasPermi="['ywgl:document:downloadFile']"
-          >下载文件</el-button>
+<!--          <el-button-->
+<!--            size="mini"-->
+<!--            type="text"-->
+<!--            icon="el-icon-download"-->
+<!--            @click="handledownload(scope.row)"-->
+<!--            v-hasPermi="['ywgl:document:downloadFile']"-->
+<!--          >下载文件</el-button>-->
         </template>
       </el-table-column>
     </el-table>
@@ -135,6 +151,16 @@
       :limit.sync="queryParams.pageSize"
       @pagination="getList"
     />
+
+    <!-- 详细分布 -->
+    <el-dialog :title="titleLoc" align="center" :visible.sync="openLoc" width="700px" append-to-body>
+      <div class="context">
+        <p v-html="textlocationClass"  style="text-align: left"></p>
+      </div>
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="cancelLoc">关闭</el-button>
+      </div>
+    </el-dialog>
 
     <!-- 添加或修改多媒体分布信息对话框 -->
     <el-dialog :title="title" :visible.sync="open" width="500px" append-to-body>
@@ -242,6 +268,9 @@ export default {
       title: "",
       // 是否显示弹出层
       open: false,
+      titleLoc: "",
+      textlocationClass: "",
+      openLoc: false,
       // 查询参数
       queryParams: {
         pageNum: 1,
@@ -283,19 +312,36 @@ export default {
     getList() {
       this.loading = true;
       listLocation(this.queryParams).then(response => {
+        for (let i = 0; i < response.rows.length; i++) {
+         response.rows[i].useDownload = this.getDownloadFileName(response.rows[i].useDownload);
+        }
+
         this.locationList = response.rows;
         this.total = response.total;
         this.loading = false;
       });
     },
+    getDownloadFileName(useDownload){
+      const oriType = useDownload.substring(useDownload.lastIndexOf('/')+1,useDownload.indexOf('--'));
+      return oriType;
+    },
     exceedFile(files,field101fileList) {
       console.log(files, field101fileList);
       this.$message.warning(`请最多上传 1 个文件`);
+    },
+    showStatement(row){
+      this.textlocationClass = row.locationClass;
+      this.openLoc = true;
+      this.titleLoc = "多媒体教室分布";
+
     },
     // 取消按钮
     cancel() {
       this.open = false;
       this.reset();
+    },
+    cancelLoc(){
+      this.openLoc = false;
     },
     // 表单重置
     reset() {
@@ -359,12 +405,6 @@ export default {
       this.$refs["form"].validate(valid => {
         let that = this;
         if (valid) {
-          // if (this.field101fileList.length === 0) {
-          //   this.$message({
-          //     message: '请先选择文件',
-          //     type: 'warning'
-          //   })
-          // }else
             if(this.form.useDownload != null && this.flag === false){
             const formData =new FormData();
             formData.append('location',this.form.location);

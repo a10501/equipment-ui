@@ -17,6 +17,14 @@
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
+      <el-form-item label="事件类型" prop="dataEventType">
+        <el-input
+          v-model="queryParams.dataEventType"
+          placeholder="请输入事件类型"
+          clearable
+          @keyup.enter.native="handleQuery"
+        />
+      </el-form-item>
 <!--      <el-form-item label="开始时间" prop="dataStartTime">-->
 <!--        <el-date-picker clearable-->
 <!--          v-model="queryParams.dataStartTime"-->
@@ -61,17 +69,17 @@
 <!--          v-hasPermi="['equipmentMan:datamanage:edit']"-->
 <!--        >修改</el-button>-->
 <!--      </el-col>-->
-      <el-col :span="1.5">
-        <el-button
-          type="danger"
-          plain
-          icon="el-icon-delete"
-          size="mini"
-          :disabled="multiple"
-          @click="handleDelete"
-          v-hasPermi="['equipmentMan:datamanage:remove']"
-        >删除</el-button>
-      </el-col>
+<!--      <el-col :span="1.5">-->
+<!--        <el-button-->
+<!--          type="danger"-->
+<!--          plain-->
+<!--          icon="el-icon-delete"-->
+<!--          size="mini"-->
+<!--          :disabled="multiple"-->
+<!--          @click="handleDelete"-->
+<!--          v-hasPermi="['equipmentMan:datamanage:remove']"-->
+<!--        >删除</el-button>-->
+<!--      </el-col>-->
       <el-col :span="1.5">
         <el-button
           type="info"
@@ -126,13 +134,13 @@
 <!--            @click="handleUpdate(scope.row)"-->
 <!--            v-hasPermi="['equipmentMan:datamanage:edit']"-->
 <!--          >修改</el-button>-->
-          <el-button
-            size="mini"
-            type="text"
-            icon="el-icon-delete"
-            @click="handleDelete(scope.row)"
-            v-hasPermi="['equipmentMan:datamanage:remove']"
-          >删除</el-button>
+<!--          <el-button-->
+<!--            size="mini"-->
+<!--            type="text"-->
+<!--            icon="el-icon-delete"-->
+<!--            @click="handleDelete(scope.row)"-->
+<!--            v-hasPermi="['equipmentMan:datamanage:remove']"-->
+<!--          >删除</el-button>-->
         </template>
       </el-table-column>
     </el-table>
@@ -306,6 +314,7 @@ export default {
     /** 重置按钮操作 */
     resetQuery() {
       this.resetForm("queryForm");
+      this.queryParams.dataEventType =null;
       this.handleQuery();
     },
     // 多选框选中数据

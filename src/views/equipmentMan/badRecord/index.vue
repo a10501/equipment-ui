@@ -1,9 +1,9 @@
 <template>
   <div class="app-container">
     <el-form :model="queryParams" ref="queryForm" size="small" :inline="true" v-show="showSearch" label-width="68px">
-      <el-form-item label="设备名称" prop="badinfoName">
+      <el-form-item label="设备名称" prop="eqmentName">
         <el-input
-          v-model="queryParams.badinfoName"
+          v-model="queryParams.eqmentName"
           placeholder="请输入设备名称"
           clearable
           @keyup.enter.native="handleQuery"
@@ -17,25 +17,26 @@
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
-      <el-form-item label="申请人" prop="badinfoPeo">
+
+      <el-form-item label="负责人" prop="nickName">
         <el-input
-          v-model="queryParams.badinfoPeo"
-          placeholder="请输入申请人"
+          v-model="queryParams.nickName"
+          placeholder="请输入负责人"
           clearable
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
-      <el-form-item label="审核状态" prop="badinfoStatus">
-        <el-select v-model="queryParams.badinfoStatus" placeholder="请选择审核状态" >
+      <el-form-item label="维修状态" prop="recordStatus">
+        <el-select v-model="queryParams.recordStatus" placeholder="请选择审核状态" clearable>
           <el-option
-            v-for="dict in dict.type.eq_handle_status"
+            v-for="dict in dict.type.eq_mainte_record"
             :key="dict.value"
             :label="dict.label"
             :value="dict.value"
           />
         </el-select>
       </el-form-item>
-      <el-form-item label="申报日期">
+      <el-form-item label="维修日期">
         <el-date-picker
           v-model="dateRange"
           style="width: 240px"
@@ -46,6 +47,22 @@
           end-placeholder="结束日期"
         ></el-date-picker>
       </el-form-item>
+<!--      <el-form-item label="维修日期" prop="recordDate">-->
+<!--        <el-date-picker clearable-->
+<!--          v-model="queryParams.recordDate"-->
+<!--          type="date"-->
+<!--          value-format="yyyy-MM-dd"-->
+<!--          placeholder="请选择维修日期">-->
+<!--        </el-date-picker>-->
+<!--      </el-form-item>-->
+<!--      <el-form-item label="申报日期" prop="recordApplyDate">-->
+<!--        <el-date-picker clearable-->
+<!--          v-model="queryParams.recordApplyDate"-->
+<!--          type="date"-->
+<!--          value-format="yyyy-MM-dd"-->
+<!--          placeholder="请选择申报日期">-->
+<!--        </el-date-picker>-->
+<!--      </el-form-item>-->
       <el-form-item>
         <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
         <el-button icon="el-icon-refresh" size="mini" @click="resetQuery">重置</el-button>
@@ -60,7 +77,7 @@
 <!--          icon="el-icon-plus"-->
 <!--          size="mini"-->
 <!--          @click="handleAdd"-->
-<!--          v-hasPermi="['equipmentMan:badinfo:add']"-->
+<!--          v-hasPermi="['equipmentMan:badRecord:add']"-->
 <!--        >新增</el-button>-->
 <!--      </el-col>-->
 <!--      <el-col :span="1.5">-->
@@ -71,7 +88,7 @@
 <!--          size="mini"-->
 <!--          :disabled="single"-->
 <!--          @click="handleUpdate"-->
-<!--          v-hasPermi="['equipmentMan:badinfo:edit']"-->
+<!--          v-hasPermi="['equipmentMan:badRecord:edit']"-->
 <!--        >审批</el-button>-->
 <!--      </el-col>-->
       <el-col :span="1.5">
@@ -82,7 +99,7 @@
           size="mini"
           :disabled="multiple"
           @click="handleDelete"
-          v-hasPermi="['equipmentMan:badinfo:remove']"
+          v-hasPermi="['equipmentMan:badRecord:remove']"
         >删除</el-button>
       </el-col>
       <el-col :span="1.5">
@@ -92,57 +109,66 @@
           icon="el-icon-download"
           size="mini"
           @click="handleExport"
-          v-hasPermi="['equipmentMan:badinfo:export']"
+          v-hasPermi="['equipmentMan:badRecord:export']"
         >导出</el-button>
       </el-col>
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getList"></right-toolbar>
     </el-row>
 
-    <el-table v-loading="loading" :data="badinfoList" @selection-change="handleSelectionChange">
+    <el-table v-loading="loading" :data="badRecordList" @selection-change="handleSelectionChange">
       <el-table-column type="selection" width="55" align="center" />
-<!--      <el-table-column label="设备报修id" align="center" prop="id" v-if="id" />-->
-      <el-table-column label="序号" width="50" align="center">
+<!--      <el-table-column label="维修id" align="center" prop="id" />-->
+      <el-table-column label="序号" align="center" width="55">
         <template slot-scope="scope">
-          <span>{{(queryParams.pageNum-1)*queryParams.pageSize+scope.$index + 1}}</span>
+          {{(queryParams.pageNum - 1) * queryParams.pageSize + scope.$index + 1}}
         </template>
       </el-table-column>
-      <el-table-column label="设备名称" align="center" prop="badinfoName" />
-      <el-table-column label="故障说明" align="center" prop="badinfoStat" />
-      <el-table-column label="申请人" align="center" prop="badinfoPeo" />
-      <el-table-column label="审核状态" align="center" prop="badinfoStatus">
+      <el-table-column label="设备名称" align="center" prop="eqmentName" />
+      <el-table-column label="教室名称" align="center" prop="className" />
+      <el-table-column label="故障说明" align="center" prop="recordStat" width="200" />
+      <el-table-column label="申报日期" align="center" prop="recordApplyDate" width="180">
         <template slot-scope="scope">
-          <dict-tag :options="dict.type.eq_handle_status" :value="scope.row.badinfoStatus"/>
+          <span>{{ parseTime(scope.row.recordApplyDate, '{y}-{m}-{d} {h}:{i}:{s}') }}</span>
         </template>
       </el-table-column>
-<!--      <el-table-column label="教室" align="center" prop="classroomId" >-->
-<!--      <template slot-scope="scope">-->
-<!--        <dict-tag :options="dict.type.test_classroom" :value="scope.row.classroomId"/>-->
-<!--      </template>-->
+      <el-table-column label="负责人" align="center" prop="nickName"/>
+      <el-table-column label="联系电话" align="center" prop="phonenumber"/>
+
+<!--      <el-table-column label="审核状态" align="center" prop="recordExamineStatus">-->
+<!--        <template slot-scope="scope">-->
+<!--          <dict-tag :options="dict.type.eq_handle_status" :value="scope.row.recordExamineStatus"/>-->
+<!--        </template>-->
 <!--      </el-table-column>-->
-      <el-table-column label="教室" align="center" prop="className" >
-      </el-table-column>
-      <el-table-column label="申报日期" align="center" prop="badinfoDate" width="180">
+      <el-table-column label="维修状态" align="center" prop="recordStatus"  >
         <template slot-scope="scope">
-          <span>{{ parseTime(scope.row.badinfoDate, '{y}-{m}-{d} {h}:{i}:{s}') }}</span>
+          <dict-tag :options="dict.type.eq_mainte_record" :value="scope.row.recordStatus"/>
         </template>
       </el-table-column>
-      <el-table-column label="备注" align="center" prop="remark" />
+
+      <el-table-column label="维修日期" align="center" prop="recordDate" width="180">
+        <template slot-scope="scope">
+          <span>{{ parseTime(scope.row.recordDate, '{y}-{m}-{d} {h}:{i}:{s}') }}</span>
+        </template>
+      </el-table-column>
+<!--      <el-table-column label="教室id" align="center" prop="classroomId" />-->
+
+
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template slot-scope="scope">
           <el-button
-            v-if="scope.row.badinfoStatus !== '2'"
+             v-if="scope.row.recordStatus !== '3'"
             size="mini"
             type="text"
             icon="el-icon-edit"
             @click="handleUpdate(scope.row)"
-            v-hasPermi="['equipmentMan:badinfo:edit']"
+            v-hasPermi="['equipmentMan:badRecord:edit']"
           >审批</el-button>
           <el-button
             size="mini"
             type="text"
             icon="el-icon-delete"
             @click="handleDelete(scope.row)"
-            v-hasPermi="['equipmentMan:badinfo:remove']"
+            v-hasPermi="['equipmentMan:badRecord:remove']"
           >删除</el-button>
         </template>
       </el-table-column>
@@ -156,41 +182,42 @@
       @pagination="getList"
     />
 
-    <!-- 添加或修改设备报修信息对话框 -->
+    <!-- 添加或修改维修信息对话框 -->
     <el-dialog :title="title" :visible.sync="open" width="500px" append-to-body>
       <el-form ref="form" :model="form" :rules="rules" label-width="100px">
-<!--        <el-form-item label="设备名称" prop="badinfoName">-->
-<!--          <el-input v-model="form.badinfoName" placeholder="请输入设备名称" />-->
+<!--        <el-form-item label="设备名称" prop="recordName">-->
+<!--          <el-input v-model="form.recordName" placeholder="请输入设备名称" />-->
 <!--        </el-form-item>-->
-<!--        <el-form-item label="故障说明" prop="badinfoStat">-->
-<!--          <el-input v-model="form.badinfoStat" placeholder="请输入故障说明" />-->
+<!--        <el-form-item label="故障说明" prop="recordStat">-->
+<!--          <el-input v-model="form.recordStat" placeholder="请输入故障说明" />-->
 <!--        </el-form-item>-->
-<!--        <el-form-item label="教室" prop="className">-->
-<!--          <el-autocomplete ref='autocomplete'-->
-<!--                           class="inline-input"-->
-<!--                           v-model="form.className"-->
-<!--                           :fetch-suggestions="querySearchAsync"-->
-<!--                           placeholder="请输入教室名称"-->
-<!--                           @select="handleSelect"-->
-
-<!--          ></el-autocomplete>-->
+<!--        <el-form-item label="负责人" prop="recordPeo">-->
+<!--          <el-input v-model="form.recordPeo" placeholder="请输入申请人" />-->
 <!--        </el-form-item>-->
-<!--        <el-form-item label="申请人" prop="badinfoPeo">-->
-<!--          <el-input v-model="form.badinfoPeo" placeholder="请输入申请人" />-->
-<!--        </el-form-item>-->
-        <el-form-item  label="审核状态" prop="badinfoStatus" v-hasPermi="['equipmentMan:badinfo:edit']">
-          <el-select v-model="form.badinfoStatus" placeholder="请选择审核状态">
+        <el-form-item label="审核状态">
+          <el-select v-model="form.recordStatus" placeholder="请选择审核状态">
             <el-option
-              v-for="dict in dict.type.eq_handle_status"
+              v-for="dict in dict.type.eq_mainte_record"
               :key="dict.value"
               :label="dict.label"
-:value="dict.value"
+              :value="dict.value"
             ></el-option>
           </el-select>
         </el-form-item>
-<!--        <el-form-item label="申报日期" prop="badinfoDate">-->
+        <el-form-item label="维修日期" prop="recordDate" v-if="form.recordStatus == '3'">
+          <el-date-picker clearable
+            v-model="form.recordDate"
+            type="datetime"
+            value-format="yyyy-MM-dd HH:mm:ss"
+            placeholder="请选择维修日期">
+          </el-date-picker>
+        </el-form-item>
+<!--        <el-form-item label="教室id" prop="classroomId">-->
+<!--          <el-input v-model="form.classroomId" placeholder="请输入教室id" />-->
+<!--        </el-form-item>-->
+<!--        <el-form-item label="申报日期" prop="recordApplyDate">-->
 <!--          <el-date-picker clearable-->
-<!--            v-model="form.badinfoDate"-->
+<!--            v-model="form.recordApplyDate"-->
 <!--            type="date"-->
 <!--            value-format="yyyy-MM-dd"-->
 <!--            placeholder="请选择申报日期">-->
@@ -209,12 +236,11 @@
 </template>
 
 <script>
-import { listBadinfo, getBadinfo, delBadinfo, addBadinfo, updateBadinfo } from "@/api/equipmentMan/badinfo";
-import {listClassroom} from "@/api/equipmentMan/classroom";
+import { listBadRecord, getBadRecord, delBadRecord, addBadRecord, updateBadRecord } from "@/api/equipmentMan/badRecord";
 
 export default {
-  name: "Badinfo",
-  dicts: ['eq_handle_status','test_classroom'],
+  name: "BadRecord",
+  dicts: ['eq_handle_status','eq_mainte_record'],
   data() {
     return {
       // 遮罩层
@@ -224,59 +250,45 @@ export default {
       // 非单个禁用
       single: true,
       // 非多个禁用
-      // 日期范围
-      dateRange: [],
       multiple: true,
       // 显示搜索条件
       showSearch: true,
       // 总条数
       total: 0,
-      // 设备报修信息表格数据
-      badinfoList: [],
-      restaurants: [],
+      // 维修信息表格数据
+      badRecordList: [],
       // 弹出层标题
       title: "",
+      // 日期范围
+      dateRange: [],
       // 是否显示弹出层
       open: false,
-
       // 查询参数
       queryParams: {
         pageNum: 1,
         pageSize: 10,
-        badinfoName: null,
-        badinfoPeo: null,
-        badinfoStatus: null,
+        eqmentName: null,
+        nickName: null,
+        recordStatus: null,
         className: null
       },
       // 表单参数
       form: {},
       // 表单校验
       rules: {
-        badinfoName: [
-          { required: true, message: "设备名称不能为空", trigger: "blur" }
-        ],
-        badinfoStat: [
-          { required: true, message: "故障说明不能为空", trigger: "blur" }
-        ],
-        classroomId: [
-          { required: true, message: "教室id不能为空", trigger: "change" }
-        ],
-        badinfoDate: [
-          { required: true, message: "申报日期不能为空", trigger: "blur" }
-        ],
       }
     };
   },
   created() {
     this.getList();
-    this.loadAll();
   },
   methods: {
-    /** 查询设备报修信息列表 */
+    /** 查询维修信息列表 */
     getList() {
       this.loading = true;
-      listBadinfo(this.addDateRange(this.queryParams, this.dateRange)).then(response => {
-        this.badinfoList = response.rows;
+      listBadRecord(this.addDateRange(this.queryParams, this.dateRange)).then(response => {
+        this.badRecordList = response.rows;
+        this.badRecordList.eqmentName = "中控台"
         this.total = response.total;
         this.loading = false;
       });
@@ -290,25 +302,17 @@ export default {
     reset() {
       this.form = {
         id: null,
-        badinfoName: null,
-        badinfoStat: null,
-        badinfoPeo: null,
-        badinfoStatus: '0',
+        eqmentName: null,
+        recordName: null,
+        recordStat: null,
+        recordPeo: null,
+        recordStatus: '0',
+        recordDate: null,
         classroomId: null,
-        eqmentId: null,
-        badinfoDate: null,
+        recordApplyDate: null,
         remark: null
       };
       this.resetForm("form");
-    },
-    //获取教室信息
-    loadAll() {
-      listClassroom().then(response =>{
-        if(response.code === 200 && response.total > 0 ){
-          this.restaurants = response.rows
-          return this.restaurants;
-        }
-      })
     },
     /** 搜索按钮操作 */
     handleQuery() {
@@ -327,41 +331,20 @@ export default {
       this.single = selection.length!==1
       this.multiple = !selection.length
     },
-  //input输入框建议数据处理
-  querySearchAsync(queryString, cb) {
-    var restaurants = this.restaurants;
-    // 解决element建议搜索框无法显示内容 的数据处理
-    for (var i = 0; i < restaurants.length; i++) {
-      restaurants[i].value = restaurants[i].className;
-    }
-    var results = queryString ? restaurants.filter(this.createStateFilter(queryString)) : restaurants;
-
-    cb(results);
-  },
-  createStateFilter(queryString) {
-    return (state) => {
-      return (state.value.toLowerCase().indexOf(queryString.toLowerCase()) === 0);
-    };
-  },
-  handleSelect(item) {
-
-    this.form.className = item.className;
-    this.form.classroomId = item.id;
-  },
     /** 新增按钮操作 */
     handleAdd() {
       this.reset();
       this.open = true;
-      this.title = "添加设备报修信息";
+      this.title = "添加维修信息";
     },
     /** 修改按钮操作 */
     handleUpdate(row) {
       this.reset();
       const id = row.id || this.ids
-      getBadinfo(id).then(response => {
+      getBadRecord(id).then(response => {
         this.form = response.data;
         this.open = true;
-        this.title = "审批报修申请";
+        this.title = "维修审批";
       });
     },
     /** 提交按钮 */
@@ -369,13 +352,13 @@ export default {
       this.$refs["form"].validate(valid => {
         if (valid) {
           if (this.form.id != null) {
-            updateBadinfo(this.form).then(response => {
-              this.$modal.msgSuccess("审批成功");
+            updateBadRecord(this.form).then(response => {
+              this.$modal.msgSuccess("操作成功");
               this.open = false;
               this.getList();
             });
           } else {
-            addBadinfo(this.form).then(response => {
+            addBadRecord(this.form).then(response => {
               this.$modal.msgSuccess("新增成功");
               this.open = false;
               this.getList();
@@ -387,8 +370,8 @@ export default {
     /** 删除按钮操作 */
     handleDelete(row) {
       const ids = row.id || this.ids;
-      this.$modal.confirm('是否确认删除设备报修信息编号为"' + ids + '"的数据项？').then(function() {
-        return delBadinfo(ids);
+      this.$modal.confirm('是否确认删除维修信息编号为"' + ids + '"的数据项？').then(function() {
+        return delBadRecord(ids);
       }).then(() => {
         this.getList();
         this.$modal.msgSuccess("删除成功");
@@ -396,9 +379,9 @@ export default {
     },
     /** 导出按钮操作 */
     handleExport() {
-      this.download('equipmentMan/badinfo/export', {
+      this.download('equipmentMan/badRecord/export', {
         ...this.queryParams
-      }, `badinfo_${new Date().getTime()}.xlsx`)
+      }, `badRecord_${new Date().getTime()}.xlsx`)
     }
   }
 };

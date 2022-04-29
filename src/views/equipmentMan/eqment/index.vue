@@ -9,6 +9,14 @@
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
+      <el-form-item label="教室名称" prop="className">
+        <el-input
+          v-model="queryParams.className"
+          placeholder="请输入设备名称"
+          clearable
+          @keyup.enter.native="handleQuery"
+        />
+      </el-form-item>
       <el-form-item label="状态" prop="eqmentStatus">
         <el-select v-model="queryParams.eqmentStatus" placeholder="请选择状态" clearable>
           <el-option
@@ -105,7 +113,7 @@
 <!--      <el-table-column label="教室id" align="center" prop="classroomId" />-->
       <el-table-column label="教室" align="center" prop="className" >
       </el-table-column>
-      <el-table-column label="负责人" align="center" prop="userName">
+      <el-table-column label="负责人" align="center" prop="nickName">
 <!--        <template slot-scope="scope">-->
 <!--          <dict-tag :options="dict.type.eq_type" :value="scope.row.responsiblePeo"/>-->
 <!--        </template>-->
@@ -123,9 +131,10 @@
         </template>
       </el-table-column>
       <el-table-column label="备注" align="center" prop="remark" />
-      <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
-        <template slot-scope="scope">
+      <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="200">
+        <template slot-scope="scope" >
           <el-button
+            v-if="scope.row.eqmentStatus !== '2'"
             size="mini"
             type="text"
             icon="el-icon-edit"
@@ -146,6 +155,7 @@
             icon="el-icon-s-cooperation"
             @click="handleApplyBad(scope.row)"
             v-hasPermi="['equipmentMan:badinfo:add']"
+            v-if="scope.row.eqmentStatus == '0'"
           >报修</el-button>
         </template>
       </el-table-column>
@@ -187,10 +197,10 @@
             ></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="负责人"  prop="userName">
+        <el-form-item label="负责人"  prop="nickName">
           <el-autocomplete ref='autocomplete'
                            class="inline-input"
-                           v-model="form.userName"
+                           v-model="form.nickName"
                            :fetch-suggestions="querySearchAsyncUser"
                            placeholder="请输入负责人姓名"
                            @select="handleSelectUser"
@@ -294,7 +304,7 @@
 <script>
 import { listEqment, getEqment, delEqment, addEqment, updateEqment } from "@/api/equipmentMan/eqment";
 import { listClassroom, getClassroom, delClassroom, addClassroom, updateClassroom } from "@/api/equipmentMan/classroom";
-import { listUser } from "@/api/system/user";
+import { listRecordUser,listUser } from "@/api/system/user";
 import { getUserProfile } from "@/api/system/user";
 import {addBadinfo} from "@/api/equipmentMan/badinfo";
 
@@ -337,6 +347,7 @@ export default {
         eqmentStatus: null,
         eqmentType: null,
         classroomId: null,
+        className: null,
         id:null
       },
       // 设备表单参数
@@ -375,14 +386,14 @@ export default {
             trigger: 'blur'
           }
         ],
-        userName:[
+        nickName:[
           {required:true,message:"负责人不能为空"},
           {
             validator: (rule, value, callback) => {
               let p = {
                 pageNum: 1,
                 pageSize: 10,
-                userName: value
+                nickName: value
               };
               listUser(p).then(response => {
                 if(response.rows.length === 0){
@@ -439,7 +450,7 @@ export default {
     },
     //获取用户信息
     loadAllUser() {
-      listUser().then(response =>{
+      listRecordUser().then(response =>{
         if(response.code === 200 && response.total > 0 ){
           this.restaurantsUser = response.rows
           return this.restaurantsUser;
@@ -451,7 +462,7 @@ export default {
     var restaurantsUser = this.restaurantsUser;
     // 解决element建议搜索框无法显示内容 的数据处理
     for (var i = 0; i < restaurantsUser.length; i++) {
-      restaurantsUser[i].value = restaurantsUser[i].userName;
+      restaurantsUser[i].value = restaurantsUser[i].nickName;
     }
     var results = queryString ? restaurantsUser.filter(this.createStateFilterUser(queryString)) : restaurantsUser;
 
@@ -463,7 +474,7 @@ export default {
     };
   },
   handleSelectUser(item) {
-     this.form.userName = item.userName;
+     this.form.nickName = item.nickName;
     this.form.peopleId = item.userId;
   },
 
@@ -528,6 +539,7 @@ export default {
         eqmentStatus: "0",
         eqmentType: null,
         classroomId: null,
+        nickName: null,
         proDate: null,
         buyDate: null,
         remark: null
@@ -540,6 +552,7 @@ export default {
       this.applyForm = {
         id: null,
         badinfoName: null,
+        eqmentId: null,
         badinfoStat: null,
         badinfoPeo: null,
         badinfoStatus: '0',
@@ -568,7 +581,7 @@ export default {
     /** 新增按钮操作 */
     handleAdd() {
       this.reset();
-      this.form.responsiblePeo = this.user.userName;
+      this.form.responsiblePeo = this.user.nickName;
       this.open = true;
       this.title = "添加设备信息";
     },
@@ -577,6 +590,8 @@ export default {
       this.resetApply();
       const id = row.id || this.ids
       getEqment(id).then(response => {
+        this.applyForm.eqmentId = response.data.id;
+        console.log(response.data.id)
         this.applyForm.badinfoName = response.data.eqmentName;
         this.applyForm.classroomId = response.data.classroomId;
         this.applyForm.className = response.data.className;
@@ -589,6 +604,7 @@ export default {
       this.reset();
       const id = row.id || this.ids
       getEqment(id).then(response => {
+
         this.form = response.data;
         this.open = true;
         this.title = "修改设备信息";
@@ -600,7 +616,7 @@ export default {
         if (valid) {
           if (this.form.id != null) {
             updateEqment(this.form).then(response => {
-              this.$modal.msgSuccess("修改成功");
+              this.$modal.msgSuccess("操作成功");
               this.open = false;
               this.getList();
             });
