@@ -1,3 +1,5 @@
+<h4 align="center">基于SpringBoot+Vue前后端分离的多媒体教室设备管理信息系统</h4>
+
 ## 开发
 
 ```bash
